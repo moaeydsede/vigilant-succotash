@@ -1,0 +1,511 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <title>Customer Evaluation – CRM Score</title>
+  <meta name="theme-color" content="#1d4ed8" />
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="app.css" />
+  <!-- SheetJS -->
+  <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.20.3/dist/xlsx.full.min.js"></script>
+  <!-- jsPDF + autoTable -->
+  <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.5.31/dist/jspdf.plugin.autotable.min.js"></script>
+  <!-- Firebase (compat) -->
+  <script defer src="https://www.gstatic.com/firebasejs/10.12.5/firebase-app-compat.js"></script>
+  <script defer src="https://www.gstatic.com/firebasejs/10.12.5/firebase-firestore-compat.js"></script>
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <div id="toastHost" class="toast-host" aria-live="polite" aria-atomic="true"></div>
+
+  <!-- Login -->
+  <section id="loginView" class="view">
+    <div class="login-wrap">
+      <div class="brand">
+        <div class="logo">CRM</div>
+        <div class="brand-txt">
+          <h1>تقييم العملاء</h1>
+          <p>Customer Evaluation – CRM Score</p>
+        </div>
+      </div>
+
+      <div class="card login-card">
+        <div class="card-h">
+          <h2>تسجيل الدخول</h2>
+          <span class="pill">Mobile First</span>
+        </div>
+
+        <div class="grid2">
+          <label class="field">
+            <span>اسم المستخدم</span>
+            <input id="loginUser" type="text" autocomplete="username" inputmode="text" placeholder="مثال: admin" />
+          </label>
+          <label class="field">
+            <span>كلمة المرور</span>
+            <input id="loginPass" type="password" autocomplete="current-password" placeholder="••••••••" />
+          </label>
+        </div>
+
+        <div class="actions">
+          <button id="btnLogin" class="btn primary">دخول</button>
+          <button id="btnResetDemo" class="btn soft" title="إنشاء بيانات تجريبية محلية">Demo</button>
+        </div>
+
+        <div class="muted small">
+          الحساب الافتراضي: <b>admin / admin123</b> — الدور: <b>Admin</b>
+        </div>
+      </div>
+
+      <div class="footnote">
+        يعمل بدون سيرفر. البيانات محليًا (LocalStorage) + Firestore اختياري.
+      </div>
+    </div>
+  </section>
+
+  <!-- App -->
+  <section id="appView" class="view hidden">
+    <header class="topbar">
+      <button id="btnMenu" class="icon-btn" aria-label="القائمة">
+        <span class="hamburger"></span>
+      </button>
+
+      <div class="top-title">
+        <div class="ttl">CRM Score</div>
+        <div class="subttl" id="companySubtitle">—</div>
+      </div>
+
+      <div class="top-actions">
+        <button id="btnQuickCompany" class="btn soft" title="بيانات الشركة">🏢</button>
+        <button id="btnSync" class="btn soft" title="مزامنة مع Firestore">مزامنة</button>
+        <button id="btnLogout" class="btn danger">خروج</button>
+      </div>
+    </header>
+
+    <aside id="sidebar" class="sidebar hidden" aria-hidden="true">
+      <div class="side-head">
+        <div class="side-user">
+          <div class="avatar" id="avatar">A</div>
+          <div>
+            <div class="who" id="whoName">—</div>
+            <div class="role" id="whoRole">—</div>
+          </div>
+        </div>
+        <button id="btnCloseMenu" class="icon-btn" aria-label="إغلاق">✕</button>
+      </div>
+
+      <nav class="nav">
+        <button class="nav-item active" data-route="dashboard">📊 لوحة التحكم</button>
+        <button class="nav-item" data-route="customers">👥 العملاء</button>
+        <button class="nav-item" data-route="transactions">🔄 الحركات</button>
+        <button class="nav-item" data-route="reports">📈 التقارير</button>
+        <button class="nav-item" data-route="excel">📤 Excel</button>
+        <button class="nav-item" data-route="pdf">🖨️ PDF</button>
+        <button class="nav-item" data-route="company">🏢 بيانات الشركة</button>
+        <button class="nav-item" data-route="users">👤 المستخدمون</button>
+        <div class="nav-sep"></div>
+        <button class="nav-item danger" id="btnWipeLocal">🧹 مسح البيانات المحلية</button>
+      </nav>
+
+      <div class="side-foot muted small">
+        <div>نسخة: <span id="appVersion">v2.0</span></div>
+        <div>محلي + Firestore اختياري</div>
+      </div>
+    </aside>
+
+    <main class="main">
+      <!-- DASHBOARD -->
+      <section class="page" id="page-dashboard">
+        <div class="page-head">
+          <h2>لوحة التحكم</h2>
+          <div class="head-actions">
+            <button class="btn soft" id="btnRecalcAll">إعادة الحساب</button>
+          </div>
+        </div>
+
+        <div class="kpis">
+          <div class="kpi card">
+            <div class="kpi-label">عدد العملاء</div>
+            <div class="kpi-val" id="kpiCustomers">0</div>
+          </div>
+          <div class="kpi card">
+            <div class="kpi-label">متوسط التقييم</div>
+            <div class="kpi-val" id="kpiAvg">0%</div>
+          </div>
+          <div class="kpi card">
+            <div class="kpi-label">نسبة السداد</div>
+            <div class="kpi-val" id="kpiPayRatio">0%</div>
+          </div>
+          <div class="kpi card">
+            <div class="kpi-label">نسبة المرتجعات</div>
+            <div class="kpi-val" id="kpiRetRatio">0%</div>
+          </div>
+        </div>
+
+        <div class="grid2 gap">
+          <div class="card">
+            <div class="card-h">
+              <h3>أفضل العملاء</h3>
+              <span class="pill">Top 10</span>
+            </div>
+            <div class="list" id="topCustomers"></div>
+          </div>
+
+          <div class="card">
+            <div class="card-h">
+              <h3>مؤشرات سريعة</h3>
+              <span class="pill">نِسب</span>
+            </div>
+            <div class="mini">
+              <div class="mini-row"><span>VIP</span><span class="badge vip">90–100</span></div>
+              <div class="mini-row"><span>جيد جدًا</span><span class="badge good">75–89</span></div>
+              <div class="mini-row"><span>متوسط</span><span class="badge mid">60–74</span></div>
+              <div class="mini-row"><span>تنبيه</span><span class="badge warn">40–59</span></div>
+              <div class="mini-row"><span>خطر</span><span class="badge danger">0–39</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- CUSTOMERS -->
+      <section class="page hidden" id="page-customers">
+        <div class="page-head">
+          <h2>العملاء</h2>
+          <div class="head-actions">
+            <button class="btn primary" id="btnAddCustomer">+ إضافة عميل</button>
+          </div>
+        </div>
+
+        <div class="filters card">
+          <div class="grid3">
+            <label class="field">
+              <span>بحث ذكي</span>
+              <div class="search-wrap">
+                <input id="custSearch" type="search" placeholder="اسم / هاتف / مدينة / ملاحظة..." />
+                <button class="icon-chip" id="btnClearSearch" title="مسح">✕</button>
+              </div>
+              <div id="searchSuggest" class="suggest hidden"></div>
+            </label>
+            <label class="field">
+              <span>المدينة</span>
+              <select id="custCityFilter"></select>
+            </label>
+            <label class="field">
+              <span>الحالة</span>
+              <select id="custStatusFilter">
+                <option value="">الكل</option>
+                <option value="Active">نشط</option>
+                <option value="Inactive">غير نشط</option>
+              </select>
+            </label>
+          </div>
+
+          <div class="grid3">
+            <label class="field">
+              <span>النجوم</span>
+              <select id="custStarsFilter">
+                <option value="">الكل</option>
+                <option value="5">⭐⭐⭐⭐⭐</option>
+                <option value="4">⭐⭐⭐⭐</option>
+                <option value="3">⭐⭐⭐</option>
+                <option value="2">⭐⭐</option>
+                <option value="1">⭐</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>ترتيب</span>
+              <select id="custSort">
+                <option value="score_desc">الأعلى تقييمًا</option>
+                <option value="pay_desc">الأعلى سدادًا</option>
+                <option value="ret_asc">الأقل مرتجعات</option>
+                <option value="name_asc">الاسم (أ-ي)</option>
+                <option value="name_desc">الاسم (ي-أ)</option>
+                <option value="created_desc">الأحدث</option>
+              </select>
+            </label>
+            <div class="field">
+              <span>النتائج</span>
+              <div class="chip" id="custCount">0</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h">
+            <h3>قائمة العملاء</h3>
+            <span class="pill">Cards</span>
+          </div>
+          <div class="list" id="customersList"></div>
+        </div>
+      </section>
+
+      <!-- TRANSACTIONS -->
+      <section class="page hidden" id="page-transactions">
+        <div class="page-head">
+          <h2>الحركات</h2>
+          <div class="head-actions">
+            <button class="btn soft" id="btnAddSale">+ مبيعات</button>
+            <button class="btn soft" id="btnAddReturn">+ مرتجعات</button>
+            <button class="btn soft" id="btnAddPayment">+ سداد</button>
+            <button class="btn soft" id="btnAddDiscount">+ خصم</button>
+          </div>
+        </div>
+
+        <div class="filters card">
+          <div class="grid3">
+            <label class="field">
+              <span>العميل</span>
+              <select id="txCustomer"></select>
+            </label>
+            <label class="field">
+              <span>النوع</span>
+              <select id="txType">
+                <option value="">الكل</option>
+                <option value="sales">مبيعات</option>
+                <option value="returns">مرتجعات</option>
+                <option value="payments">سداد</option>
+                <option value="discounts">خصومات</option>
+              </select>
+            </label>
+            <label class="field">
+              <span>بحث (فاتورة/ملاحظة)</span>
+              <input id="txSearch" type="search" placeholder="invoiceNo / note..." />
+            </label>
+          </div>
+          <div class="grid3">
+            <label class="field">
+              <span>من تاريخ</span>
+              <input id="txFrom" type="date" />
+            </label>
+            <label class="field">
+              <span>إلى تاريخ</span>
+              <input id="txTo" type="date" />
+            </label>
+            <div class="field">
+              <span>المجموع</span>
+              <div class="chip" id="txTotal">0</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h">
+            <h3>قائمة الحركات</h3>
+            <span class="pill">Filter</span>
+          </div>
+          <div class="list" id="txList"></div>
+        </div>
+      </section>
+
+      <!-- REPORTS -->
+      <section class="page hidden" id="page-reports">
+        <div class="page-head">
+          <h2>التقارير</h2>
+          <div class="head-actions">
+            <button class="btn soft" id="btnPrintReports">طباعة PDF</button>
+          </div>
+        </div>
+
+        <div class="filters card">
+          <div class="grid3">
+            <label class="field">
+              <span>من تاريخ</span>
+              <input id="repFrom" type="date" />
+            </label>
+            <label class="field">
+              <span>إلى تاريخ</span>
+              <input id="repTo" type="date" />
+            </label>
+            <label class="field">
+              <span>ترتيب</span>
+              <select id="repSort">
+                <option value="score_desc">الأعلى تقييمًا</option>
+                <option value="pay_desc">الأعلى سدادًا</option>
+                <option value="ret_asc">الأقل مرتجعات</option>
+                <option value="sales_desc">أعلى مبيعات</option>
+              </select>
+            </label>
+          </div>
+        </div>
+
+        <div class="grid2 gap">
+          <div class="card">
+            <div class="card-h">
+              <h3>ملخص النِسب</h3>
+              <span class="pill">Sales vs</span>
+            </div>
+            <div class="mini" id="repSummary"></div>
+          </div>
+          <div class="card">
+            <div class="card-h">
+              <h3>أفضل العملاء حسب التقرير</h3>
+              <span class="pill">Top 20</span>
+            </div>
+            <div class="list" id="repTop"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- EXCEL -->
+      <section class="page hidden" id="page-excel">
+        <div class="page-head">
+          <h2>Excel</h2>
+          <div class="head-actions">
+            <button class="btn soft" id="btnDownloadTemplate">تحميل قالب</button>
+            <button class="btn soft" id="btnExportExcel">تصدير البيانات</button>
+            <label class="btn primary file-btn">
+              استيراد البيانات
+              <input id="fileExcel" type="file" accept=".xlsx,.xls" hidden />
+            </label>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h">
+            <h3>عملاء فقط (سريع)</h3>
+            <span class="pill">Customers</span>
+          </div>
+          <div class="actions">
+            <button class="btn soft" id="btnExportCustomers">تصدير العملاء</button>
+            <label class="btn primary file-btn">
+              استيراد العملاء
+              <input id="fileCustomers" type="file" accept=".xlsx,.xls" hidden />
+            </label>
+          </div>
+          <div class="muted small" style="padding:0 14px 14px">
+            يدعم الأعمدة: id (اختياري), name, phone, city, status, note
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h">
+            <h3>سجل العمليات</h3>
+            <span class="pill">Log</span>
+          </div>
+          <pre id="excelLog" class="pre"></pre>
+        </div>
+      </section>
+
+      <!-- PDF -->
+      <section class="page hidden" id="page-pdf">
+        <div class="page-head">
+          <h2>PDF</h2>
+          <div class="head-actions">
+            <button class="btn soft" id="btnPdfTop">أفضل العملاء</button>
+            <button class="btn primary" id="btnPdfStatement">كشف حساب عميل</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h">
+            <h3>إعداد كشف الحساب</h3>
+            <span class="pill">A4</span>
+          </div>
+          <div class="grid2">
+            <label class="field">
+              <span>اختيار عميل</span>
+              <select id="pdfCustomer"></select>
+            </label>
+            <label class="field">
+              <span>مدة (اختياري)</span>
+              <select id="pdfRange">
+                <option value="">كل الفترة</option>
+                <option value="30">آخر 30 يوم</option>
+                <option value="90">آخر 90 يوم</option>
+                <option value="180">آخر 180 يوم</option>
+                <option value="365">آخر 365 يوم</option>
+              </select>
+            </label>
+          </div>
+          <div class="muted small" style="padding:0 14px 14px">
+            يتضمن: المبيعات / المرتجعات / السداد / الخصومات + التقييم + نسب السداد/المرتجعات.
+          </div>
+        </div>
+      </section>
+
+      <!-- COMPANY -->
+      <section class="page hidden" id="page-company">
+        <div class="page-head">
+          <h2>بيانات الشركة</h2>
+          <div class="head-actions">
+            <button class="btn primary" id="btnSaveCompany">حفظ</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h">
+            <h3>معلومات الشركة</h3>
+            <span class="pill">Local</span>
+          </div>
+          <div class="grid2">
+            <label class="field"><span>اسم الشركة</span><input id="coName" type="text" placeholder="مثال: شركة النجاح" /></label>
+            <label class="field"><span>هاتف</span><input id="coPhone" type="tel" placeholder="01xxxxxxxxx" /></label>
+            <label class="field"><span>المدينة</span><input id="coCity" type="text" placeholder="القاهرة" /></label>
+            <label class="field"><span>شعار (اختياري)</span><input id="coLogo" type="text" placeholder="رابط شعار (URL)" /></label>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h">
+            <h3>Firebase Config</h3>
+            <span class="pill">Firestore</span>
+          </div>
+          <div class="muted small" style="padding:0 14px 8px">
+            بدون هذه البيانات سيعمل النظام محليًا فقط.
+          </div>
+          <div class="grid2">
+            <label class="field"><span>apiKey</span><input id="fb_apiKey" type="text" /></label>
+            <label class="field"><span>authDomain</span><input id="fb_authDomain" type="text" /></label>
+            <label class="field"><span>projectId</span><input id="fb_projectId" type="text" /></label>
+            <label class="field"><span>storageBucket</span><input id="fb_storageBucket" type="text" /></label>
+            <label class="field"><span>messagingSenderId</span><input id="fb_messagingSenderId" type="text" /></label>
+            <label class="field"><span>appId</span><input id="fb_appId" type="text" /></label>
+          </div>
+          <div class="actions">
+            <button class="btn soft" id="btnTestFirebase">اختبار الاتصال</button>
+          </div>
+          <div id="fbStatus" class="muted small" style="padding:0 14px 14px"></div>
+        </div>
+      </section>
+
+      <!-- USERS -->
+      <section class="page hidden" id="page-users">
+        <div class="page-head">
+          <h2>المستخدمون</h2>
+          <div class="head-actions">
+            <button class="btn primary" id="btnAddUser">+ إضافة مستخدم</button>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="card-h">
+            <h3>إدارة المستخدمين</h3>
+            <span class="pill">Local</span>
+          </div>
+          <div class="muted small" style="padding:0 14px 10px">
+            إدارة محلية للاستخدام الداخلي. للاحتراف متعدد المستخدمين استخدم Authentication + Security Rules.
+          </div>
+          <div class="list" id="usersList"></div>
+        </div>
+      </section>
+    </main>
+
+    <!-- MODAL -->
+    <div id="modalHost" class="modal-host hidden" role="dialog" aria-modal="true" aria-hidden="true">
+      <div class="modal-backdrop" id="modalBackdrop"></div>
+      <div class="modal" role="document">
+        <div class="modal-h">
+          <h3 id="modalTitle">—</h3>
+          <button class="icon-btn" id="modalClose" aria-label="إغلاق">✕</button>
+        </div>
+        <div class="modal-b" id="modalBody"></div>
+        <div class="modal-f" id="modalFooter"></div>
+      </div>
+    </div>
+
+  </section>
+</body>
+</html>
