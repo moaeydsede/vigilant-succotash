@@ -1,328 +1,0 @@
-<!doctype html>
-<html lang="ar" dir="rtl">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Customer Evaluation – CRM Score</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com">
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="./styles.css" />
-</head>
-<body>
-  <div class="app">
-    <header class="topbar">
-      <button class="icon-btn" id="btnMenu" aria-label="القائمة">
-        <span class="hamburger" aria-hidden="true"></span>
-      </button>
-      <div class="brand">
-        <div class="brand-title">Customer Evaluation</div>
-        <div class="brand-sub">CRM Score</div>
-      </div>
-      <div class="top-actions">
-        <button class="chip" id="btnRefresh">تحديث</button>
-        <button class="chip" id="btnLogout" hidden>خروج</button>
-      </div>
-    </header>
-
-    <aside class="drawer" id="drawer" aria-hidden="true">
-      <div class="drawer-head">
-        <div class="drawer-title">القائمة</div>
-        <button class="icon-btn" id="btnCloseDrawer" aria-label="إغلاق">✕</button>
-      </div>
-
-      <nav class="drawer-nav">
-        <button class="nav-item active" data-route="customers">👥 العملاء</button>
-        <button class="nav-item" data-route="transactions">🧾 الحركات</button>
-        <button class="nav-item" data-route="invoices">📄 الفواتير</button>
-        <button class="nav-item" data-route="company">🏢 بيانات الشركة</button>
-        <button class="nav-item" data-route="users" id="navUsers" hidden>👤 المستخدمون</button>
-        <button class="nav-item" data-route="tools">🧰 استيراد/تصدير</button>
-        <button class="nav-item" data-route="about">ℹ️ حول</button>
-      </nav>
-
-      <div class="drawer-foot">
-        <div class="small muted">واجهة ويب خفيفة + Firestore</div>
-      </div>
-    </aside>
-
-    <main class="content">
-      <section class="view active" id="view-login">
-        <div class="login-wrap">
-          <div class="login-card">
-            <div class="login-title">تسجيل الدخول</div>
-            <div class="login-sub muted">Customer Evaluation – CRM Score</div>
-
-            <div class="grid2" style="margin-top:14px">
-              <div class="field" style="grid-column:1/-1">
-                <label>البريد الإلكتروني</label>
-                <input id="authEmail" type="email" autocomplete="username" placeholder="name@example.com" />
-              </div>
-              <div class="field" style="grid-column:1/-1">
-                <label>كلمة المرور</label>
-                <input id="authPass" type="password" autocomplete="current-password" placeholder="••••••••" />
-              </div>
-              <div class="row" style="grid-column:1/-1; justify-content:space-between; gap:10px">
-                <button class="btn" id="btnLogin">دخول</button>
-                <button class="btn ghost" id="btnShowRegister">إنشاء حساب</button>
-              </div>
-              <div class="muted small" id="authMsg" style="grid-column:1/-1"></div>
-            </div>
-
-            <div class="muted small" style="margin-top:12px; line-height:1.7">
-              عند إنشاء حساب جديد سيتم حفظه كـ <b>Viewer</b> تلقائيًا، ويمكن للـ <b>Admin</b> تغيير الصلاحية لاحقًا.
-            </div>
-          </div>
-        </div>
-      </section>
-
-      <section class="view" id="view-users">
-        <div class="page-head">
-          <h1>المستخدمون</h1>
-          <div class="page-actions">
-            <button class="btn" id="btnAddUser">إضافة مستخدم</button>
-          </div>
-        </div>
-
-        <div class="panel">
-          <div class="panel-head">
-            <div class="panel-title">قائمة المستخدمين</div>
-            <div class="panel-actions">
-              <button class="chip" id="btnReloadUsers">تحديث</button>
-            </div>
-          </div>
-          <div class="panel-body">
-            <div id="usersList"></div>
-          </div>
-        </div>
-
-        <div class="panel">
-          <div class="panel-head"><div class="panel-title">ملاحظات</div></div>
-          <div class="panel-body prose">
-            <ul>
-              <li><b>Admin</b>: إدارة المستخدمين + كل الصلاحيات.</li>
-              <li><b>Viewer</b>: عرض فقط.</li>
-            </ul>
-            <div class="muted small">لتحويل أول مستخدم إلى Admin: افتح Firestore → users → مستند UID الخاص بك → غيّر role إلى Admin.</div>
-          </div>
-        </div>
-      </section>
-
-
-      <section class="view" id="view-customers">
-        <div class="page-head">
-          <h1>العملاء</h1>
-          <div class="page-actions">
-            <button class="btn" id="btnAddCustomer">إضافة عميل</button>
-          </div>
-        </div>
-
-        <div class="filters">
-          <div class="field">
-            <label>بحث</label>
-            <input id="qCustomer" type="search" placeholder="ابحث بالاسم أو المدينة أو الهاتف…" />
-          </div>
-          <div class="field">
-            <label>المدينة</label>
-            <select id="fCity"><option value="">الكل</option></select>
-          </div>
-          <div class="field">
-            <label>الحالة</label>
-            <select id="fStatus">
-              <option value="">الكل</option>
-              <option value="Active">Active</option>
-              <option value="Inactive">Inactive</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>النجوم</label>
-            <select id="fStars">
-              <option value="">الكل</option>
-              <option value="5">⭐⭐⭐⭐⭐</option>
-              <option value="4">⭐⭐⭐⭐</option>
-              <option value="3">⭐⭐⭐</option>
-              <option value="2">⭐⭐</option>
-              <option value="1">⭐</option>
-            </select>
-          </div>
-          <div class="field">
-            <label>ترتيب</label>
-            <select id="sSort">
-              <option value="score_desc">الأعلى تقييمًا</option>
-              <option value="name_asc">الاسم (أ-ي)</option>
-              <option value="created_desc">الأحدث</option>
-            </select>
-          </div>
-        </div>
-
-        <div class="grid" id="customersGrid"></div>
-        <div class="center muted" id="customersEmpty" hidden>لا توجد بيانات لعرضها.</div>
-      </section>
-
-      <section class="view" id="view-customer">
-        <div class="page-head">
-          <button class="btn ghost" id="btnBack">⬅ رجوع</button>
-          <h1 id="custName">تفاصيل العميل</h1>
-          <div class="page-actions">
-            <button class="btn danger" id="btnDeleteCustomer">حذف</button>
-          </div>
-        </div>
-
-        <div class="cards" id="custSummaryCards"></div>
-
-        <div class="panel">
-          <div class="panel-head"><div class="panel-title">إجراءات</div></div>
-          <div class="panel-body row">
-            <button class="btn" id="btnAddTxn">إضافة حركة</button>
-            <button class="btn" id="btnViewInvoices">عرض الفواتير</button>
-            <button class="btn" id="btnPrintCustomer">طباعة / PDF</button>
-          </div>
-        </div>
-
-        <div class="panel">
-          <div class="panel-head">
-            <div class="panel-title">حركات العميل</div>
-            <div class="panel-actions">
-              <input id="custDateFrom" type="date" />
-              <input id="custDateTo" type="date" />
-              <button class="chip" id="btnCustFilterDate">فلترة</button>
-            </div>
-          </div>
-          <div class="panel-body">
-            <div class="tabs">
-              <button class="tab active" data-tab="sales">المبيعات</button>
-              <button class="tab" data-tab="returns">المرتجعات</button>
-              <button class="tab" data-tab="payments">السداد</button>
-              <button class="tab" data-tab="discounts">الخصومات</button>
-            </div>
-            <div id="custTxns"></div>
-          </div>
-        </div>
-      </section>
-
-      <section class="view" id="view-transactions">
-        <div class="page-head">
-          <h1>الحركات</h1>
-          <div class="page-actions"><button class="btn" id="btnAddGlobalTxn">إضافة حركة</button></div>
-        </div>
-        <div class="filters">
-          <div class="field">
-            <label>نوع الحركة</label>
-            <select id="gTxnType">
-              <option value="sales">Sales</option>
-              <option value="returns">Returns</option>
-              <option value="payments">Payments</option>
-              <option value="discounts">Discounts</option>
-            </select>
-          </div>
-          <div class="field"><label>عميل</label><select id="gCustomer"></select></div>
-          <div class="field"><label>من تاريخ</label><input id="gFrom" type="date" /></div>
-          <div class="field"><label>إلى تاريخ</label><input id="gTo" type="date" /></div>
-          <div class="field"><label>&nbsp;</label><button class="btn" id="btnLoadGlobalTxns">عرض</button></div>
-        </div>
-        <div class="panel">
-          <div class="panel-head">
-            <div class="panel-title">النتائج</div>
-            <div class="panel-actions"><button class="chip" id="btnPrintGlobalTxns">طباعة</button></div>
-          </div>
-          <div class="panel-body"><div id="globalTxns"></div></div>
-        </div>
-      </section>
-
-      <section class="view" id="view-invoices">
-        <div class="page-head">
-          <h1>الفواتير</h1>
-          <div class="page-actions">
-            <button class="btn" id="btnRecalcInvoices">تحديث</button>
-            <button class="btn" id="btnPrintInvoices">طباعة</button>
-          </div>
-        </div>
-        <div class="filters">
-          <div class="field"><label>عميل</label><select id="invCustomer"></select></div>
-          <div class="field"><label>بحث رقم فاتورة</label><input id="invQuery" type="search" placeholder="S-1001 …" /></div>
-          <div class="field"><label>من تاريخ</label><input id="invFrom" type="date" /></div>
-          <div class="field"><label>إلى تاريخ</label><input id="invTo" type="date" /></div>
-          <div class="field"><label>&nbsp;</label><button class="btn" id="btnLoadInvoices">عرض</button></div>
-        </div>
-        <div class="grid" id="invoicesGrid"></div>
-        <div class="center muted" id="invoicesEmpty" hidden>لا توجد فواتير.</div>
-      </section>
-
-      <section class="view" id="view-company">
-        <div class="page-head">
-          <h1>بيانات الشركة</h1>
-          <div class="page-actions"><button class="btn" id="btnSaveCompany">حفظ</button></div>
-        </div>
-        <div class="panel">
-          <div class="panel-head"><div class="panel-title">المعلومات</div></div>
-          <div class="panel-body grid2">
-            <div class="field"><label>اسم الشركة</label><input id="coName" type="text" placeholder="شركة النور" /></div>
-            <div class="field"><label>هاتف</label><input id="coPhone" type="text" placeholder="010…" /></div>
-            <div class="field"><label>العنوان</label><input id="coAddress" type="text" placeholder="القاهرة…" /></div>
-            <div class="field"><label>شعار (رابط)</label><input id="coLogo" type="url" placeholder="https://…" /></div>
-          </div>
-        </div>
-        <div class="panel">
-          <div class="panel-head"><div class="panel-title">معاينة الطباعة</div></div>
-          <div class="panel-body"><div class="print-preview" id="companyPreview"></div></div>
-        </div>
-      </section>
-
-      <section class="view" id="view-tools">
-        <div class="page-head">
-          <h1>استيراد / تصدير Excel</h1>
-          <div class="page-actions"><button class="btn" id="btnExport">تصدير Excel</button></div>
-        </div>
-        <div class="panel">
-          <div class="panel-head"><div class="panel-title">استيراد Excel</div></div>
-          <div class="panel-body">
-            <div class="muted small">Sheets: customers, sales, returns, payments, discounts</div>
-            <div class="row">
-              <input type="file" id="fileExcel" accept=".xlsx,.xls" />
-              <button class="btn" id="btnImport">استيراد</button>
-            </div>
-            <div class="muted small" id="importLog"></div>
-          </div>
-        </div>
-        <div class="panel">
-          <div class="panel-head"><div class="panel-title">قوالب سريعة</div></div>
-          <div class="panel-body row">
-            <button class="btn ghost" id="btnDownloadTemplate">تحميل قالب Excel</button>
-            <button class="btn ghost" id="btnSeedDemo">إضافة بيانات تجريبية</button>
-            <button class="btn ghost" id="btnClearAll">مسح كل البيانات</button>
-          </div>
-        </div>
-      </section>
-
-      <section class="view" id="view-about">
-        <div class="page-head"><h1>حول</h1></div>
-        <div class="panel"><div class="panel-body prose">
-          <p>تطبيق موبايل خفيف (Web) لتقييم العملاء تلقائيًا بناءً على المبيعات/المرتجعات/السداد/الخصومات مع نجوم وبحث/فلترة.</p>
-          <ul><li>Firestore</li><li>Excel Import/Export</li><li>Print/PDF</li><li>Company Info</li></ul>
-          <div class="muted small">v1.0 — 2026-02-07</div>
-        </div></div>
-      </section>
-    </main>
-
-    <div class="modal" id="modal" hidden>
-      <div class="modal-backdrop" id="modalBackdrop"></div>
-      <div class="modal-card" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
-        <div class="modal-head">
-          <div class="modal-title" id="modalTitle">عنوان</div>
-          <button class="icon-btn" id="modalClose" aria-label="إغلاق">✕</button>
-        </div>
-        <div class="modal-body" id="modalBody"></div>
-        <div class="modal-foot" id="modalFoot"></div>
-      </div>
-    </div>
-
-    <div class="toast" id="toast" hidden></div>
-    <div class="print-area" id="printArea" aria-hidden="true"></div>
-  </div>
-
-  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
-  <script src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
-  <script type="module" src="./firebase.js"></script>
-  <script type="module" src="./app.js"></script>
-</body>
-</html>
