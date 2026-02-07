@@ -1,0 +1,34 @@
+{
+  "customers": [
+    {
+      "name": "محمد أحمد",
+      "phone": "010xxxxxxx",
+      "city": "القاهرة",
+      "status": "Active",
+      "createdAt": "2026-02-07T12:00:00Z"
+    },
+    {
+      "name": "أحمد",
+      "phone": "",
+      "city": "الجيزة",
+      "status": "Active",
+      "createdAt": "2026-02-07T12:00:00Z"
+    },
+    {
+      "name": "خالد",
+      "phone": "",
+      "city": "الإسكندرية",
+      "status": "Inactive",
+      "createdAt": "2026-02-07T12:00:00Z"
+    }
+  ],
+  "sales": [
+    {
+      "customerId": "cust_001",
+      "invoiceNo": "S-1001",
+      "amount": 2500,
+      "date": "2026-02-01T10:00:00Z",
+      "note": "طلبية أدوات"
+    }
+  ]
+}
