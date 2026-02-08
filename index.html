@@ -1,0 +1,459 @@
+<!DOCTYPE html>
+
+<html dir="rtl" lang="ar">
+<head>
+<meta charset="utf-8"/>
+<meta content="width=device-width,initial-scale=1,viewport-fit=cover" name="viewport"/>
+<meta content="#0b1220" name="theme-color"/>
+<meta content="Customer Evaluation – CRM Score v2.3.0 VIP" name="description"/>
+<title>Customer Evaluation – CRM Score (VIP)</title>
+<link href="./manifest.json" rel="manifest"/>
+<link href="./assets/favicon-192.png" rel="icon" sizes="192x192"/>
+<link href="./assets/icon-192.png" rel="apple-touch-icon"/>
+<link href="./app.css" rel="stylesheet">
+<!-- Libraries (CDN) -->
+<script defer="" src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+<script defer="" src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+<script defer="" src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+<script defer="" src="./app.js"></script>
+</link></head>
+<body>
+<div id="app">
+<!-- Topbar -->
+<header class="topbar">
+<button aria-label="القائمة" class="icon-btn" id="btnMenu">
+<span class="hamburger"></span>
+</button>
+<div class="topbar-title">
+<div class="brand-title">CRM Score</div>
+<div class="brand-sub" id="brandSub">VIP v2.3.0</div>
+</div>
+<div class="topbar-actions">
+<button class="pill-btn" id="btnRecalc" title="إعادة الحساب">إعادة الحساب</button>
+<button class="pill-btn danger" id="btnLogout" title="خروج">خروج</button>
+</div>
+</header>
+<!-- Sidebar / Bottom sheet -->
+<aside aria-hidden="true" class="sidebar" id="sidebar">
+<div class="sidebar-head">
+<div class="sidebar-user">
+<div class="avatar" id="sessionAvatar">A</div>
+<div>
+<div class="sidebar-name" id="sessionName">—</div>
+<div class="sidebar-role" id="sessionRole">—</div>
+</div>
+</div>
+<button aria-label="إغلاق" class="icon-btn" id="btnCloseMenu">
+          ✕
+        </button>
+</div>
+<nav class="sidebar-nav">
+<button class="nav-item" data-view="dashboard">لوحة التحكم</button>
+<button class="nav-item" data-view="customers">العملاء</button>
+<button class="nav-item" data-view="transactions">الحركات</button>
+<button class="nav-item" data-view="reports">التقارير</button>
+<button class="nav-item" data-view="ratios">نِسب</button>
+<button class="nav-item" data-view="excel">Excel</button>
+<button class="nav-item" data-view="pdf">PDF</button>
+<button class="nav-item" data-view="company">بيانات الشركة</button>
+<button class="nav-item admin-only" data-view="users">المستخدمون</button>
+</nav>
+<div class="sidebar-foot">
+<button class="pill-btn warn" id="btnWipeLocal">مسح البيانات المحلية</button>
+<div class="muted small">* للضرورة فقط – لا رجعة</div>
+</div>
+</aside>
+<div class="backdrop" hidden="" id="backdrop"></div>
+<!-- Main -->
+<main class="main">
+<!-- Login View -->
+<section class="view" data-view="login" id="view-login">
+<div class="login-wrap">
+<div class="login-card">
+<div class="login-head">
+<div class="login-logo">
+<img alt="CRM" id="loginLogo" src="./assets/icon-192.png"/>
+</div>
+<div>
+<div class="login-title">Customer Evaluation – CRM Score</div>
+<div class="login-sub">VIP v2.3.0 • عربي 100٪</div>
+</div>
+</div>
+<div class="login-tabs" role="tablist">
+<button aria-selected="true" class="tab active" data-login-tab="staff" role="tab">الإدارة / المحاسبة</button>
+<button aria-selected="false" class="tab" data-login-tab="viewer" role="tab">عرض فقط</button>
+</div>
+<form class="login-form" id="loginForm">
+<div class="field">
+<label>اسم المستخدم</label>
+<input autocomplete="username" id="loginUser" placeholder="admin" required="" type="text"/>
+</div>
+<div class="field">
+<label>كلمة المرور</label>
+<div class="input-wrap">
+<input autocomplete="current-password" id="loginPass" placeholder="admin123" required="" type="password"/>
+<button aria-label="إظهار/إخفاء كلمة المرور" class="icon-eye" id="togglePass" title="إظهار/إخفاء" type="button">
+<span></span>
+</button>
+</div>
+</div>
+<button class="btn primary" id="btnLogin" type="submit">دخول</button>
+<div class="form-msg err" hidden="" id="loginError"></div>
+<div class="row-between">
+<label class="check">
+<input checked="" id="rememberMe" type="checkbox"/>
+<span>تذكرني</span>
+</label>
+<button class="link-btn" id="btnClearLogin" type="button">مسح الحقول</button>
+</div>
+<div class="hint">
+                الحساب الرئيسي: <b>admin</b> / <b>admin123</b>
+</div>
+</form>
+<form class="login-form" hidden="" id="viewerForm">
+<div class="field">
+<label>رمز العرض (اختياري)</label>
+<input id="viewerCode" placeholder="مثال: VIEW123" type="text"/>
+</div>
+<button class="btn primary" type="submit">دخول (عرض فقط)</button>
+<div class="hint muted">
+                * إذا لم يتم تفعيل رمز العرض من الإعدادات سيتم الدخول كـ Viewer عام.
+              </div>
+</form>
+<div class="login-foot">
+<button class="link" id="btnInstallPwa" type="button">تثبيت كتطبيق (PWA)</button>
+<span class="dot">•</span>
+<button class="link" id="btnSeedDemo" type="button">بيانات تجريبية</button>
+</div>
+</div>
+</div>
+</section>
+<!-- Dashboard -->
+<section class="view" data-view="dashboard" hidden="" id="view-dashboard">
+<div class="panel">
+<div class="panel-title">لوحة التحكم</div>
+<div class="kpi-grid">
+<div class="kpi">
+<div class="kpi-label">عدد العملاء</div>
+<div class="kpi-value" id="kpiCustomers">0</div>
+</div>
+<div class="kpi">
+<div class="kpi-label">إجمالي المبيعات</div>
+<div class="kpi-value" id="kpiSales">0</div>
+</div>
+<div class="kpi">
+<div class="kpi-label">إجمالي السداد</div>
+<div class="kpi-value" id="kpiPayments">0</div>
+</div>
+<div class="kpi">
+<div class="kpi-label">نسبة السداد</div>
+<div class="kpi-value" id="kpiPayRatio">0%</div>
+</div>
+</div>
+<div class="panel-sub">
+<div class="row between">
+<div class="muted">أفضل العملاء</div>
+<button class="pill-btn" id="btnGoCustomers">عرض الكل</button>
+</div>
+</div>
+<div class="cards" id="topCustomersList"></div>
+</div>
+</section>
+<!-- Customers -->
+<section class="view" data-view="customers" hidden="" id="view-customers">
+<div class="panel">
+<div class="panel-title">العملاء</div>
+<div class="toolbar">
+<input id="custSearch" placeholder="بحث بالاسم / الهاتف / المدينة..." type="search"/>
+<div class="row gap wrap">
+<select id="custCityFilter" title="المدينة">
+<option value="">كل المدن</option>
+</select>
+<select id="custStatusFilter" title="الحالة">
+<option value="">كل الحالات</option>
+<option value="active">نشط</option>
+<option value="blocked">موقوف</option>
+</select>
+<button class="btn primary" id="btnAddCustomer">+ إضافة عميل</button>
+</div>
+</div>
+<div class="cards" id="customersList"></div>
+<div class="muted small">* اضغط على بطاقة العميل لعرض التفاصيل، أو استخدم الأزرار داخل البطاقة.</div>
+</div>
+</section>
+<!-- Transactions -->
+<section class="view" data-view="transactions" hidden="" id="view-transactions">
+<div class="panel">
+<div class="panel-title">الحركات</div>
+<div class="toolbar">
+<div class="row gap wrap">
+<button class="btn primary" data-add-tx="sale">+ بيع</button>
+<button class="btn" data-add-tx="payment">+ سداد</button>
+<button class="btn warn" data-add-tx="return">+ مرتجع</button>
+<button class="btn danger" data-add-tx="discount">+ خصم</button>
+</div>
+<div class="row gap wrap">
+<input id="txSearch" placeholder="بحث بالفاتورة / اسم العميل..." type="search"/>
+<input id="txFrom" type="date"/>
+<input id="txTo" type="date"/>
+<button class="btn" id="btnTxClearDates" type="button">مسح التواريخ</button>
+</div>
+</div>
+<div class="cards" id="txList"></div>
+</div>
+</section>
+<!-- Ratios -->
+<section class="view" data-view="ratios" hidden="" id="view-ratios">
+<div class="panel">
+<div class="panel-title">صفحة النِسب (CRM)</div>
+<div class="toolbar">
+<div class="row gap wrap">
+<input id="ratSearch" placeholder="بحث عن عميل..." type="search"/>
+<select id="ratSort" title="ترتيب">
+<option value="score_desc">الأعلى تقييمًا</option>
+<option value="sales_desc">الأعلى مبيعات</option>
+<option value="payratio_desc">الأعلى سداد</option>
+<option value="returns_asc">الأقل مرتجعات</option>
+<option value="discounts_asc">الأقل خصومات</option>
+</select>
+</div>
+<div class="row gap wrap">
+<input id="ratFrom" type="date"/>
+<input id="ratTo" type="date"/>
+<button class="btn primary" id="btnRatiosRefresh" type="button">تحديث</button>
+<button class="btn" id="btnRatClear" type="button">مسح</button>
+</div>
+<div class="row gap wrap">
+<button class="btn warn" id="btnRatPrintReturns" type="button">طباعة: مبيعات/مرتجعات</button>
+<button class="btn" id="btnRatPrintPayments" type="button">طباعة: مبيعات/سداد</button>
+<button class="btn danger" id="btnRatPrintDiscounts" type="button">طباعة: مبيعات/خصومات</button>
+</div>
+</div>
+<div class="cards" id="ratList"></div>
+<div class="muted small">* هذه الصفحة تعرض النسب لكل عميل مع تقييم النجوم.</div>
+</div>
+</section>
+<!-- Reports -->
+<section class="view" data-view="reports" hidden="" id="view-reports">
+<div class="panel">
+<div class="panel-title">التقارير</div>
+<div class="toolbar">
+<div class="row gap wrap">
+<input id="repFrom" type="date"/>
+<input id="repTo" type="date"/>
+<button class="btn primary" id="btnRepApply" type="button">تطبيق</button>
+<button class="btn" id="btnRepClear" type="button">مسح</button>
+<button class="btn" id="btnReportPdf" type="button">طباعة PDF</button>
+</div>
+</div>
+<div class="kpi-grid">
+<div class="kpi">
+<div class="kpi-label">إجمالي المبيعات</div>
+<div class="kpi-value" id="repSales">0</div>
+</div>
+<div class="kpi">
+<div class="kpi-label">إجمالي السداد</div>
+<div class="kpi-value" id="repPayments">0</div>
+</div>
+<div class="kpi">
+<div class="kpi-label">نسبة السداد</div>
+<div class="kpi-value" id="repPayPct">0%</div>
+</div>
+<div class="kpi">
+<div class="kpi-label">نسبة المرتجعات</div>
+<div class="kpi-value" id="repRetPct">0%</div>
+</div>
+</div>
+<div class="panel-sub">
+<div class="muted">أفضل العملاء خلال الفترة</div>
+</div>
+<div class="cards" id="repTopCustomers"></div>
+</div>
+</section>
+<!-- Excel -->
+<section class="view" data-view="excel" hidden="" id="view-excel">
+<div class="panel">
+<div class="panel-title">Excel (استيراد / تصدير)</div>
+<div class="grid2">
+<div class="card">
+<div class="card-title">قوالب جاهزة</div>
+<div class="card-body">
+<button class="btn primary" id="btnDownloadTemplate" type="button">تحميل قالب كامل</button>
+<button class="btn" id="btnDownloadCustomersTemplate" type="button">تحميل قالب العملاء فقط</button>
+<div class="muted small">* استخدم القالب لضمان الاستيراد الصحيح.</div>
+</div>
+</div>
+<div class="card">
+<div class="card-title">تصدير</div>
+<div class="card-body">
+<button class="btn primary" id="btnExportAll" type="button">تصدير كل البيانات</button>
+<button class="btn" id="btnExportCustomersOnly" type="button">تصدير العملاء فقط</button>
+</div>
+</div>
+<div class="card">
+<div class="card-title">استيراد</div>
+<div class="card-body">
+<button class="btn primary" id="btnImportAll" type="button">استيراد كل البيانات</button>
+<button class="btn" id="btnImportCustomersOnly" type="button">استيراد العملاء فقط</button>
+<input accept=".xlsx,.xls" hidden="" id="fileImportAll" type="file"/>
+<input accept=".xlsx,.xls" hidden="" id="fileImportCustomers" type="file"/>
+<div class="muted small">* بعد الاستيراد سيتم تحديث الحسابات تلقائيًا.</div>
+</div>
+</div>
+<div class="card">
+<div class="card-title">سجل العمليات</div>
+<div class="card-body">
+<button class="btn" id="btnClearLog" type="button">مسح السجل</button>
+<div class="log" id="opsLog"></div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Tabbar -->
+<nav class="tabbar" hidden="" id="tabbar">
+<button class="tabbtn" data-view="dashboard" type="button"><div class="ico">🏠</div><div class="lbl">الرئيسية</div></button>
+<button class="tabbtn" data-view="customers" type="button"><div class="ico">👤</div><div class="lbl">العملاء</div></button>
+<button class="tabbtn" data-view="transactions" type="button"><div class="ico">🧾</div><div class="lbl">الحركات</div></button>
+<button class="tabbtn" data-view="ratios" type="button"><div class="ico">📊</div><div class="lbl">النِسب</div></button>
+<button class="tabbtn" data-view="reports" type="button"><div class="ico">📈</div><div class="lbl">التقارير</div></button>
+</nav>
+
+<!-- PDF -->
+<section class="view" data-view="pdf" hidden="" id="view-pdf">
+<div class="panel">
+<div class="panel-title">PDF (A4)</div>
+<div class="grid2">
+<div class="card">
+<div class="card-title">أفضل العملاء</div>
+<div class="card-body">
+<button class="btn primary" id="btnPdfTop">طباعة أفضل العملاء</button>
+<div class="muted small">يعتمد على آخر إعادة حساب.</div>
+</div>
+</div>
+<div class="card">
+<div class="card-title">كشف حساب عميل</div>
+<div class="card-body">
+<div class="field">
+<label>اختيار عميل</label>
+<select class="select" id="stmtCustomer"></select>
+</div>
+<div class="date-range">
+<input id="stmtFrom" type="date"/>
+<span class="muted">إلى</span>
+<input id="stmtTo" type="date"/>
+</div>
+<button class="btn primary" id="btnPdfStatement">طباعة كشف الحساب</button>
+</div>
+</div>
+<div class="card">
+<div class="card-title">تقارير النِسب (كل تقرير لوحده)</div>
+<div class="card-body">
+<div class="date-range">
+<input id="pdfRepFrom" type="date"/>
+<span class="muted">إلى</span>
+<input id="pdfRepTo" type="date"/>
+<button class="pill-btn" id="btnPdfRepClear">مسح</button>
+</div>
+<button class="btn primary" id="btnPdfSalesReturns">تقرير: المبيعات ↔ المرتجعات</button>
+<button class="btn primary" id="btnPdfSalesPayments">تقرير: المبيعات ↔ السداد</button>
+<button class="btn primary" id="btnPdfSalesDiscounts">تقرير: المبيعات ↔ الخصومات</button>
+<div class="muted small">يتضمن (النِسب + التقييم بالنجوم) لكل عميل.</div>
+</div>
+</div>
+</div>
+</div>
+</section>
+<!-- Company -->
+<section class="view" data-view="company" hidden="" id="view-company">
+<div class="panel">
+<div class="panel-title">بيانات الشركة</div>
+<div class="form-grid">
+<div class="field">
+<label>اسم الشركة</label>
+<input id="coName" placeholder="اسم الشركة" type="text"/>
+</div>
+<div class="field">
+<label>الهاتف</label>
+<input id="coPhone" placeholder="0100..." type="text"/>
+</div>
+<div class="field">
+<label>المدينة</label>
+<input id="coCity" placeholder="القاهرة" type="text"/>
+</div>
+<div class="field">
+<label>رابط الشعار (URL)</label>
+<input id="coLogoUrl" placeholder="https://..." type="url"/>
+</div>
+<div class="card soft">
+<div class="card-title">Viewer Code (اختياري)</div>
+<div class="card-body">
+<div class="field">
+<label>رمز دخول العرض فقط</label>
+<input id="viewerCodeSetting" placeholder="مثال: VIEW123" type="text"/>
+</div>
+<div class="muted small">إذا كان فارغًا: الدخول كـ Viewer عام.</div>
+</div>
+</div>
+<div class="card soft">
+<div class="card-title">Firebase (اختياري)</div>
+<div class="card-body">
+<div class="muted small">هذه الإعدادات محفوظة فقط — المزامنة ليست مفعلة افتراضيًا (بدون سيرفر).</div>
+<textarea id="fbConfig" placeholder='{"apiKey":"...","projectId":"..."}' rows="6"></textarea>
+</div>
+</div>
+<div class="row gap">
+<button class="btn primary" id="btnSaveCompany">حفظ</button>
+<button class="btn" id="btnPreviewLogo">معاينة الشعار</button>
+</div>
+<div class="logo-preview" hidden="" id="logoPreview">
+<img alt="logo" id="logoPreviewImg"/>
+</div>
+</div>
+</div>
+</section>
+<!-- Users (Admin only) -->
+<section class="view" data-view="users" hidden="" id="view-users">
+<div class="panel">
+<div class="panel-title">المستخدمون (Admin فقط)</div>
+<div class="toolbar">
+<button class="btn primary" id="btnAddUser">+ إضافة مستخدم</button>
+</div>
+<div class="cards" id="usersList"></div>
+</div>
+</section>
+</main>
+<!-- Bottom Tab Bar -->
+<footer class="tabbar" hidden="" id="tabbar">
+<button class="tabbtn" data-view="dashboard">
+<span class="ico">🏠</span><span class="lbl">الرئيسية</span>
+</button>
+<button class="tabbtn" data-view="customers">
+<span class="ico">👥</span><span class="lbl">العملاء</span>
+</button>
+<button class="tabbtn" data-view="transactions">
+<span class="ico">🧾</span><span class="lbl">الحركات</span>
+</button>
+<button class="tabbtn" data-view="reports">
+<span class="ico">📊</span><span class="lbl">التقارير</span>
+</button>
+<button class="tabbtn" data-view="excel">
+<span class="ico">📥</span><span class="lbl">Excel</span>
+</button>
+</footer>
+<!-- Modal -->
+<div class="modal" hidden="" id="modal">
+<div class="modal-card">
+<div class="modal-head">
+<div class="modal-title" id="modalTitle">—</div>
+<button aria-label="إغلاق" class="icon-btn" id="modalClose">✕</button>
+</div>
+<div class="modal-body" id="modalBody"></div>
+<div class="modal-foot" id="modalFoot"></div>
+</div>
+</div>
+<!-- Toast -->
+<div class="toast" hidden="" id="toast"></div>
+</div>
+</body>
+</html>
