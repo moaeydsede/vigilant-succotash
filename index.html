@@ -1,0 +1,458 @@
+<!doctype html>
+<html lang="ar" dir="rtl">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <meta name="theme-color" content="#0b1220" />
+  <meta name="description" content="Customer Evaluation – CRM Score v2.3.0 VIP" />
+  <title>Customer Evaluation – CRM Score (VIP)</title>
+
+  <link rel="manifest" href="./manifest.json">
+  <link rel="icon" href="./assets/favicon-192.png" sizes="192x192">
+  <link rel="apple-touch-icon" href="./assets/icon-192.png">
+
+  <link rel="stylesheet" href="./app.css" />
+
+  <!-- Libraries (CDN) -->
+  <script defer src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js"></script>
+  <script defer src="https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.2/dist/jspdf.plugin.autotable.min.js"></script>
+  <script defer src="./app.js"></script>
+</head>
+<body>
+  <div id="app">
+    <!-- Topbar -->
+    <header class="topbar">
+      <button class="icon-btn" id="btnMenu" aria-label="القائمة">
+        <span class="hamburger"></span>
+      </button>
+      <div class="topbar-title">
+        <div class="brand-title">CRM Score</div>
+        <div class="brand-sub" id="brandSub">VIP v2.3.0</div>
+      </div>
+      <div class="topbar-actions">
+        <button class="pill-btn" id="btnRecalc" title="إعادة الحساب">إعادة الحساب</button>
+        <button class="pill-btn danger" id="btnLogout" title="خروج">خروج</button>
+      </div>
+    </header>
+
+    <!-- Sidebar / Bottom sheet -->
+    <aside class="sidebar" id="sidebar" aria-hidden="true">
+      <div class="sidebar-head">
+        <div class="sidebar-user">
+          <div class="avatar" id="sessionAvatar">A</div>
+          <div>
+            <div class="sidebar-name" id="sessionName">—</div>
+            <div class="sidebar-role" id="sessionRole">—</div>
+          </div>
+        </div>
+        <button class="icon-btn" id="btnCloseMenu" aria-label="إغلاق">
+          ✕
+        </button>
+      </div>
+
+      <nav class="sidebar-nav">
+        <button class="nav-item" data-view="dashboard">لوحة التحكم</button>
+        <button class="nav-item" data-view="customers">العملاء</button>
+        <button class="nav-item" data-view="transactions">الحركات</button>
+        <button class="nav-item" data-view="reports">التقارير</button>
+        <button class="nav-item" data-view="excel">Excel</button>
+        <button class="nav-item" data-view="pdf">PDF</button>
+        <button class="nav-item" data-view="company">بيانات الشركة</button>
+        <button class="nav-item admin-only" data-view="users">المستخدمون</button>
+      </nav>
+
+      <div class="sidebar-foot">
+        <button class="pill-btn warn" id="btnWipeLocal">مسح البيانات المحلية</button>
+        <div class="muted small">* للضرورة فقط – لا رجعة</div>
+      </div>
+    </aside>
+
+    <div class="backdrop" id="backdrop" hidden></div>
+
+    <!-- Main -->
+    <main class="main">
+      <!-- Login View -->
+      <section class="view" id="view-login" data-view="login">
+        <div class="login-wrap">
+          <div class="login-card">
+            <div class="login-head">
+              <div class="login-logo">
+                <img id="loginLogo" src="./assets/icon-192.png" alt="CRM" />
+              </div>
+              <div>
+                <div class="login-title">Customer Evaluation – CRM Score</div>
+                <div class="login-sub">VIP v2.3.0 • عربي 100٪</div>
+              </div>
+            </div>
+
+            <div class="login-tabs" role="tablist">
+              <button class="tab active" data-login-tab="staff" role="tab" aria-selected="true">الإدارة / المحاسبة</button>
+              <button class="tab" data-login-tab="viewer" role="tab" aria-selected="false">عرض فقط</button>
+            </div>
+
+            <form id="loginForm" class="login-form">
+              <div class="field">
+                <label>اسم المستخدم</label>
+                <input id="loginUser" type="text" autocomplete="username" placeholder="admin" required />
+              </div>
+              <div class="field">
+                <label>كلمة المرور</label>
+                <input id="loginPass" type="password" autocomplete="current-password" placeholder="admin123" required />
+              </div>
+              <button class="btn primary" type="submit">دخول</button>
+
+              <div class="hint">
+                الحساب الرئيسي: <b>admin</b> / <b>admin123</b>
+              </div>
+            </form>
+
+            <form id="viewerForm" class="login-form" hidden>
+              <div class="field">
+                <label>رمز العرض (اختياري)</label>
+                <input id="viewerCode" type="text" placeholder="مثال: VIEW123" />
+              </div>
+              <button class="btn primary" type="submit">دخول (عرض فقط)</button>
+              <div class="hint muted">
+                * إذا لم يتم تفعيل رمز العرض من الإعدادات سيتم الدخول كـ Viewer عام.
+              </div>
+            </form>
+
+            <div class="login-foot">
+              <button class="link" id="btnInstallPwa" type="button">تثبيت كتطبيق (PWA)</button>
+              <span class="dot">•</span>
+              <button class="link" id="btnSeedDemo" type="button">بيانات تجريبية</button>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Dashboard -->
+      <section class="view" id="view-dashboard" data-view="dashboard" hidden>
+        <div class="panel">
+          <div class="panel-title">لوحة التحكم</div>
+
+          <div class="kpi-grid">
+            <div class="kpi">
+              <div class="kpi-label">عدد العملاء</div>
+              <div class="kpi-value" id="kpiCustomers">0</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi-label">إجمالي المبيعات</div>
+              <div class="kpi-value" id="kpiSales">0</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi-label">إجمالي السداد</div>
+              <div class="kpi-value" id="kpiPayments">0</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi-label">نسبة السداد</div>
+              <div class="kpi-value" id="kpiPayRatio">0%</div>
+            </div>
+          </div>
+
+          <div class="panel-sub">
+            <div class="row between">
+              <div class="muted">أفضل العملاء</div>
+              <button class="pill-btn" id="btnGoCustomers">عرض الكل</button>
+            </div>
+          </div>
+
+          <div id="topCustomersList" class="cards"></div>
+        </div>
+      </section>
+
+      <!-- Customers -->
+      <section class="view" id="view-customers" data-view="customers" hidden>
+        <div class="panel">
+          <div class="panel-title">العملاء</div>
+
+          <div class="toolbar">
+            <div class="search">
+              <input id="custSearch" type="search" placeholder="بحث: اسم / هاتف / مدينة / ملاحظة..." />
+            </div>
+            <select id="custCityFilter" class="select">
+              <option value="">كل المدن</option>
+            </select>
+            <select id="custStatusFilter" class="select">
+              <option value="">كل الحالات</option>
+              <option value="Active">نشط</option>
+              <option value="Inactive">غير نشط</option>
+            </select>
+            <button class="btn primary" id="btnAddCustomer">+ إضافة عميل</button>
+          </div>
+
+          <div id="customersList" class="cards"></div>
+        </div>
+      </section>
+
+      <!-- Transactions -->
+      <section class="view" id="view-transactions" data-view="transactions" hidden>
+        <div class="panel">
+          <div class="panel-title">الحركات</div>
+
+          <div class="toolbar wrap">
+            <div class="seg">
+              <button class="seg-btn" data-add-tx="sale">+ مبيعات</button>
+              <button class="seg-btn" data-add-tx="return">+ مرتجعات</button>
+              <button class="seg-btn" data-add-tx="payment">+ سداد</button>
+              <button class="seg-btn" data-add-tx="discount">+ خصم</button>
+            </div>
+
+            <div class="search">
+              <input id="txSearch" type="search" placeholder="بحث: رقم فاتورة / ملاحظة..." />
+            </div>
+
+            <div class="date-range">
+              <input id="txFrom" type="date" />
+              <span class="muted">إلى</span>
+              <input id="txTo" type="date" />
+              <button class="pill-btn" id="btnTxClearDates">مسح</button>
+            </div>
+          </div>
+
+          <div id="txList" class="cards"></div>
+        </div>
+      </section>
+
+      <!-- Reports -->
+      <section class="view" id="view-reports" data-view="reports" hidden>
+        <div class="panel">
+          <div class="panel-title">التقارير</div>
+
+          <div class="toolbar">
+            <div class="date-range">
+              <input id="repFrom" type="date" />
+              <span class="muted">إلى</span>
+              <input id="repTo" type="date" />
+              <button class="pill-btn" id="btnRepApply">تطبيق</button>
+              <button class="pill-btn" id="btnRepClear">مسح</button>
+            </div>
+
+            <button class="btn primary" id="btnReportPdf">طباعة PDF</button>
+          </div>
+
+          <div class="kpi-grid">
+            <div class="kpi">
+              <div class="kpi-label">مبيعات الفترة</div>
+              <div class="kpi-value" id="repSales">0</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi-label">سداد الفترة</div>
+              <div class="kpi-value" id="repPayments">0</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi-label">سداد%</div>
+              <div class="kpi-value" id="repPayPct">0%</div>
+            </div>
+            <div class="kpi">
+              <div class="kpi-label">مرتجعات%</div>
+              <div class="kpi-value" id="repRetPct">0%</div>
+            </div>
+          </div>
+
+          <div class="panel-sub">
+            <div class="muted">أفضل العملاء حسب التقرير</div>
+          </div>
+          <div id="repTopCustomers" class="cards"></div>
+        </div>
+      </section>
+
+      <!-- Excel -->
+      <section class="view" id="view-excel" data-view="excel" hidden>
+        <div class="panel">
+          <div class="panel-title">Excel</div>
+
+          <div class="grid2">
+            <div class="card">
+              <div class="card-title">تحميل القوالب</div>
+              <div class="card-body">
+                <button class="btn" id="btnDownloadTemplate">تحميل قالب (كامل)</button>
+                <button class="btn" id="btnDownloadCustomersTemplate">تحميل قالب (عملاء فقط)</button>
+                <div class="muted small">القالب يُنشأ تلقائيًا بنفس الأعمدة المطلوبة.</div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-title">تصدير</div>
+              <div class="card-body">
+                <button class="btn primary" id="btnExportAll">تصدير البيانات كاملة</button>
+                <button class="btn" id="btnExportCustomersOnly">تصدير العملاء فقط</button>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-title">استيراد</div>
+              <div class="card-body">
+                <input type="file" id="fileImportAll" accept=".xlsx,.xls" hidden />
+                <input type="file" id="fileImportCustomers" accept=".xlsx,.xls" hidden />
+                <button class="btn warn" id="btnImportAll">استيراد البيانات (كامل)</button>
+                <button class="btn warn" id="btnImportCustomersOnly">استيراد العملاء فقط</button>
+                <div class="muted small">* الاستيراد يستبدل البيانات داخل الجهاز.</div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-title">سجل العمليات</div>
+              <div class="card-body">
+                <div id="opsLog" class="log"></div>
+                <button class="pill-btn" id="btnClearLog">مسح السجل</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- PDF -->
+      <section class="view" id="view-pdf" data-view="pdf" hidden>
+        <div class="panel">
+          <div class="panel-title">PDF (A4)</div>
+
+          <div class="grid2">
+            <div class="card">
+              <div class="card-title">أفضل العملاء</div>
+              <div class="card-body">
+                <button class="btn primary" id="btnPdfTop">طباعة أفضل العملاء</button>
+                <div class="muted small">يعتمد على آخر إعادة حساب.</div>
+              </div>
+            </div>
+
+            <div class="card">
+              <div class="card-title">كشف حساب عميل</div>
+              <div class="card-body">
+                <div class="field">
+                  <label>اختيار عميل</label>
+                  <select id="stmtCustomer" class="select"></select>
+                </div>
+                <div class="date-range">
+                  <input id="stmtFrom" type="date" />
+                  <span class="muted">إلى</span>
+                  <input id="stmtTo" type="date" />
+                </div>
+                <button class="btn primary" id="btnPdfStatement">طباعة كشف الحساب</button>
+              </div>
+            </div>
+            <div class="card">
+              <div class="card-title">تقارير النِسب (كل تقرير لوحده)</div>
+              <div class="card-body">
+                <div class="date-range">
+                  <input id="pdfRepFrom" type="date" />
+                  <span class="muted">إلى</span>
+                  <input id="pdfRepTo" type="date" />
+                  <button class="pill-btn" id="btnPdfRepClear">مسح</button>
+                </div>
+                <button class="btn primary" id="btnPdfSalesReturns">تقرير: المبيعات ↔ المرتجعات</button>
+                <button class="btn primary" id="btnPdfSalesPayments">تقرير: المبيعات ↔ السداد</button>
+                <button class="btn primary" id="btnPdfSalesDiscounts">تقرير: المبيعات ↔ الخصومات</button>
+                <div class="muted small">يتضمن (النِسب + التقييم بالنجوم) لكل عميل.</div>
+              </div>
+            </div>
+
+          </div>
+        </div>
+      </section>
+
+      <!-- Company -->
+      <section class="view" id="view-company" data-view="company" hidden>
+        <div class="panel">
+          <div class="panel-title">بيانات الشركة</div>
+
+          <div class="form-grid">
+            <div class="field">
+              <label>اسم الشركة</label>
+              <input id="coName" type="text" placeholder="اسم الشركة" />
+            </div>
+            <div class="field">
+              <label>الهاتف</label>
+              <input id="coPhone" type="text" placeholder="0100..." />
+            </div>
+            <div class="field">
+              <label>المدينة</label>
+              <input id="coCity" type="text" placeholder="القاهرة" />
+            </div>
+            <div class="field">
+              <label>رابط الشعار (URL)</label>
+              <input id="coLogoUrl" type="url" placeholder="https://..." />
+            </div>
+
+            <div class="card soft">
+              <div class="card-title">Viewer Code (اختياري)</div>
+              <div class="card-body">
+                <div class="field">
+                  <label>رمز دخول العرض فقط</label>
+                  <input id="viewerCodeSetting" type="text" placeholder="مثال: VIEW123" />
+                </div>
+                <div class="muted small">إذا كان فارغًا: الدخول كـ Viewer عام.</div>
+              </div>
+            </div>
+
+            <div class="card soft">
+              <div class="card-title">Firebase (اختياري)</div>
+              <div class="card-body">
+                <div class="muted small">هذه الإعدادات محفوظة فقط — المزامنة ليست مفعلة افتراضيًا (بدون سيرفر).</div>
+                <textarea id="fbConfig" rows="6" placeholder='{"apiKey":"...","projectId":"..."}'></textarea>
+              </div>
+            </div>
+
+            <div class="row gap">
+              <button class="btn primary" id="btnSaveCompany">حفظ</button>
+              <button class="btn" id="btnPreviewLogo">معاينة الشعار</button>
+            </div>
+
+            <div class="logo-preview" id="logoPreview" hidden>
+              <img id="logoPreviewImg" alt="logo" />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- Users (Admin only) -->
+      <section class="view" id="view-users" data-view="users" hidden>
+        <div class="panel">
+          <div class="panel-title">المستخدمون (Admin فقط)</div>
+
+          <div class="toolbar">
+            <button class="btn primary" id="btnAddUser">+ إضافة مستخدم</button>
+          </div>
+
+          <div id="usersList" class="cards"></div>
+        </div>
+      </section>
+    </main>
+
+    <!-- Bottom Tab Bar -->
+    <footer class="tabbar" id="tabbar" hidden>
+      <button class="tabbtn" data-view="dashboard">
+        <span class="ico">🏠</span><span class="lbl">الرئيسية</span>
+      </button>
+      <button class="tabbtn" data-view="customers">
+        <span class="ico">👥</span><span class="lbl">العملاء</span>
+      </button>
+      <button class="tabbtn" data-view="transactions">
+        <span class="ico">🧾</span><span class="lbl">الحركات</span>
+      </button>
+      <button class="tabbtn" data-view="reports">
+        <span class="ico">📊</span><span class="lbl">التقارير</span>
+      </button>
+      <button class="tabbtn" data-view="excel">
+        <span class="ico">📥</span><span class="lbl">Excel</span>
+      </button>
+    </footer>
+
+    <!-- Modal -->
+    <div class="modal" id="modal" hidden>
+      <div class="modal-card">
+        <div class="modal-head">
+          <div class="modal-title" id="modalTitle">—</div>
+          <button class="icon-btn" id="modalClose" aria-label="إغلاق">✕</button>
+        </div>
+        <div class="modal-body" id="modalBody"></div>
+        <div class="modal-foot" id="modalFoot"></div>
+      </div>
+    </div>
+
+    <!-- Toast -->
+    <div class="toast" id="toast" hidden></div>
+  </div>
+</body>
+</html>
